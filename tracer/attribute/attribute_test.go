@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+func TestAttribute_KeyValuePair(t *testing.T) {
+	got := KeyValuePair("some_key", "some_val")
+	want := KeyValue{Key: Key("some_key"), Value: any("some_value")}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("want %v, got %v", got, want)
+	}
+
+	got = KeyValuePair("some_other_key", 1)
+	want = KeyValue{Key: Key("some_other_key"), Value: any(1)}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("want %v, got %v", got, want)
+	}
+}
+
 func TestAttribute_HTTPUrl(t *testing.T) {
 	got := HTTPUrl("some_url")
 	want := KeyValue{Key: HTTPUrlKey, Value: any("some_url")}
@@ -104,6 +118,14 @@ func TestAttribute_DBStatement(t *testing.T) {
 func TestAttribute_DBOperation(t *testing.T) {
 	got := DBOperation("BEGIN")
 	want := KeyValue{Key: DBOperationKey, Value: any("BEGIN")}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("want %v, got %v", got, want)
+	}
+}
+
+func TestAttribute_DBTable(t *testing.T) {
+	got := DBTable("some_table")
+	want := KeyValue{Key: DBTableKey, Value: any("some_table")}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("want %v, got %v", got, want)
 	}
