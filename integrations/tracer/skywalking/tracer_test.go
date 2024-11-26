@@ -2,9 +2,10 @@ package skywalking
 
 import (
 	"context"
+	"testing"
+
 	"github.com/SkyAPM/go2sky"
 	v3 "skywalking.apache.org/repo/goapi/collect/language/agent/v3"
-	"testing"
 
 	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
 )
@@ -131,38 +132,29 @@ func TestSkyWalkingTracer_SpanFromContext(t *testing.T) {
 
 ////////////// Testing Tracer's PRIVATE METHODS //////////////////
 
-func TestMapSpanType(t *testing.T) {
+func TestGenerateSkyWalkingOptions(t *testing.T) {
+	defer t.Cleanup(recoverPanic(t))
+
 	tracer := &Tracer{}
 
-	if go2skySpanType := tracer.mapSpanType(tengcoruxTracer.SpanTypeLocal); go2skySpanType != go2sky.SpanTypeLocal {
-		t.Errorf("expects %v but got %v", go2sky.SpanTypeLocal, go2skySpanType)
-	}
-
-	if go2skySpanType := tracer.mapSpanType(tengcoruxTracer.SpanTypeEntry); go2skySpanType != go2sky.SpanTypeEntry {
-		t.Errorf("expects %v but got %v", go2sky.SpanTypeEntry, go2skySpanType)
-	}
-
-	if go2skySpanType := tracer.mapSpanType(tengcoruxTracer.SpanTypeExit); go2skySpanType != go2sky.SpanTypeExit {
-		t.Errorf("expects %v but got %v", go2sky.SpanTypeExit, go2skySpanType)
-	}
-}
-
-func TestMapSpanLayer(t *testing.T) {
-	tracer := &Tracer{}
-
-	if go2skySpanLayer := tracer.mapSpanLayer(tengcoruxTracer.SpanLayerUnknown); go2skySpanLayer != v3.SpanLayer_Unknown {
-		t.Errorf("expects %v but got %v", v3.SpanLayer_Unknown, go2skySpanLayer)
-	}
-
-	if go2skySpanLayer := tracer.mapSpanLayer(tengcoruxTracer.SpanLayerDatabase); go2skySpanLayer != v3.SpanLayer_Database {
-		t.Errorf("expects %v but got %v", v3.SpanLayer_Database, go2skySpanLayer)
-	}
-
-	if go2skySpanLayer := tracer.mapSpanLayer(tengcoruxTracer.SpanLayerHttp); go2skySpanLayer != v3.SpanLayer_Http {
-		t.Errorf("expects %v but got %v", v3.SpanLayer_Http, go2skySpanLayer)
-	}
-
-	if go2skySpanLayer := tracer.mapSpanLayer(tengcoruxTracer.SpanLayerMQ); go2skySpanLayer != v3.SpanLayer_MQ {
-		t.Errorf("expects %v but got %v", v3.SpanLayer_MQ, go2skySpanLayer)
-	}
+	t.Run("EmptyConfig", func(t *testing.T) {
+		opts := tracer.generateSkywalkSpanOptions("hello", &tengcoruxTracer.StartSpanConfig{})
+		if len(opts) != 2 {
+			t.Errorf("generated go2sky options must have a length of 2, but got %d", len(opts))
+		}
+	})
+	t.Run("WithSpanLayer", func(t *testing.T) {
+		opts := tracer.generateSkywalkSpanOptions("hello", &tengcoruxTracer.StartSpanConfig{
+			SpanLayer: tengcoruxTracer.SpanLayerDatabase,
+		})
+		if len(opts) != 2 {
+			t.Errorf("generated go2sky options must have a length of 2, but got %d", len(opts))
+		}
+	})
+	t.Run("WithTraceID", func(t *testing.T) {
+		opts := tracer.generateSkywalkSpanOptions("hello", &tengcoruxTracer.StartSpanConfig{TraceID: "hello"})
+		if len(opts) != 3 {
+			t.Errorf("generated go2sky options must have a length of 3, but got %d", len(opts))
+		}
+	})
 }

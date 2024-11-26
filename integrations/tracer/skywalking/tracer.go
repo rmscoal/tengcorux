@@ -2,10 +2,10 @@ package skywalking
 
 import (
 	"context"
+
 	"github.com/SkyAPM/go2sky"
 	"github.com/SkyAPM/go2sky/propagation"
 	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
-	v3 "skywalking.apache.org/repo/goapi/collect/language/agent/v3"
 )
 
 type Tracer struct {
@@ -19,17 +19,9 @@ func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...tengcoruxTr
 		opt(startSpanConfig)
 	}
 
-	go2skySpan, ctx, _ := t.tracer.CreateLocalSpan(ctx,
-		go2sky.WithOperationName(name),
-		go2sky.WithSpanType(t.mapSpanType(startSpanConfig.SpanType)),
-		go2sky.WithContext(
-			&propagation.SpanContext{
-				TraceID:      startSpanConfig.TraceID,
-				ParentSpanID: stringToSpanID(startSpanConfig.ParentSpanID),
-			},
-		),
-	)
-	go2skySpan.SetSpanLayer(t.mapSpanLayer(startSpanConfig.SpanLayer))
+	go2skySpan, ctx, _ := t.tracer.CreateLocalSpan(ctx, t.generateSkywalkSpanOptions(name, startSpanConfig)...)
+	go2skySpan.SetSpanLayer(mapSpanLayer(startSpanConfig.SpanLayer))
+	go2skySpan.SetComponent(mapComponentLibrary(startSpanConfig.SpanLayer).AsInt32())
 
 	return ctx, &Span{
 		tracer: t,
@@ -60,30 +52,19 @@ func (t *Tracer) SpanFromContext(ctx context.Context) tengcoruxTracer.Span {
 
 ////////////// Tracer's PRIVATE METHODS //////////////////
 
-func (t *Tracer) mapSpanType(option tengcoruxTracer.SpanType) go2sky.SpanType {
-	switch option {
-	case tengcoruxTracer.SpanTypeLocal:
-		return go2sky.SpanTypeLocal
-	case tengcoruxTracer.SpanTypeEntry:
-		return go2sky.SpanTypeEntry
-	case tengcoruxTracer.SpanTypeExit:
-		return go2sky.SpanTypeExit
-	default:
-		return go2sky.SpanTypeLocal
+// generateSkywalkSpanOptions generates a slice of go2sky SpanOptions from a given operation name and start span config.
+func (t *Tracer) generateSkywalkSpanOptions(operationName string, startSpanConfig *tengcoruxTracer.StartSpanConfig) []go2sky.SpanOption {
+	options := []go2sky.SpanOption{
+		go2sky.WithOperationName(operationName),
+		go2sky.WithSpanType(mapSpanType(startSpanConfig.SpanType)),
 	}
-}
 
-func (t *Tracer) mapSpanLayer(option tengcoruxTracer.SpanLayer) v3.SpanLayer {
-	switch option {
-	case tengcoruxTracer.SpanLayerUnknown:
-		return v3.SpanLayer_Unknown
-	case tengcoruxTracer.SpanLayerDatabase:
-		return v3.SpanLayer_Database
-	case tengcoruxTracer.SpanLayerHttp:
-		return v3.SpanLayer_Http
-	case tengcoruxTracer.SpanLayerMQ:
-		return v3.SpanLayer_MQ
-	default:
-		return v3.SpanLayer_Unknown
+	if startSpanConfig.TraceID != "" {
+		options = append(options, go2sky.WithContext(&propagation.SpanContext{
+			TraceID:      startSpanConfig.TraceID,
+			ParentSpanID: stringToSpanID(startSpanConfig.ParentSpanID),
+		}))
 	}
+
+	return options
 }

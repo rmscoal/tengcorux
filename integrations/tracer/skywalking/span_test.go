@@ -112,10 +112,10 @@ func TestSkyWalkingSpanContext(t *testing.T) {
 
 	// This fails, TraceID is always empty
 	t.Run("TraceID", func(t *testing.T) {
-		// traceId := sc.TraceID()
-		// if traceId == "" {
-		// 	t.Error("traceId should not be empty")
-		// }
+		traceId := sc.TraceID()
+		if traceId == "" {
+			t.Error("traceId should not be empty")
+		}
 	})
 	t.Run("SpanID", func(t *testing.T) {
 		spanId := sc.SpanID()
