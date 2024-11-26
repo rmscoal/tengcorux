@@ -7,6 +7,10 @@ type KeyValue struct {
 	Value any
 }
 
+func KeyValuePair(key string, val any) KeyValue {
+	return Key(key).Val(val)
+}
+
 func (k Key) Val(val any) KeyValue {
 	return KeyValue{
 		Key:   k,
@@ -78,11 +82,12 @@ const (
 	DBNameKey = Key("db.name")
 	// DBInstanceIDKey is the Key conforming to the "db.instance.id" semantics.
 	DBInstanceIDKey = Key("db.instance.id")
-	// DBStatementKey is the Key conforming to the "db.statement" semantics used for showing
-	// db statements without its argument variables value.
+	// DBStatementKey is the Key conforming to the "db.statement" semantics.
 	DBStatementKey = Key("db.statement")
 	// DBOperationKey is the Key conforming to the "db.operation" semantics.
 	DBOperationKey = Key("db.operation")
+	// DBTableKey is the Key conforming to the "db.table" semantics.
+	DBTableKey = Key("db.table")
 )
 
 func DBSystem(val any) KeyValue {
@@ -103,6 +108,10 @@ func DBStatement(val any) KeyValue {
 
 func DBOperation(val any) KeyValue {
 	return DBOperationKey.Val(val)
+}
+
+func DBTable(val any) KeyValue {
+	return DBTableKey.Val(val)
 }
 
 const (
