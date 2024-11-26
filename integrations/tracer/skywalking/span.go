@@ -3,17 +3,23 @@ package skywalking
 import (
 	"context"
 	"fmt"
-	"github.com/SkyAPM/go2sky"
-	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
-	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"go/types"
 	"strconv"
 	"time"
+
+	"github.com/SkyAPM/go2sky"
+	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
+	"github.com/rmscoal/tengcorux/tracer/attribute"
 )
 
 var _ tengcoruxTracer.Span = (*Span)(nil)
 
-// Span represents a span in a trace.
+// Span represents a unit of work in a distributed trace.
+//
+// A span captures timing, metadata, and contextual information
+// about a specific operation within a trace. This struct provides
+// abstraction over the underlying SkyWalking `go2sky.Span`,
+// enabling more intuitive interaction and additional functionality.
 type Span struct {
 	span    go2sky.Span
 	tracer  *Tracer
@@ -59,7 +65,10 @@ func (s *Span) Context() tengcoruxTracer.SpanContext {
 	return s.context
 }
 
-// SpanContext stores the underlying context of the current span.
+// SpanContext is a wrapper around a Go context for which it stores the underlying
+// context of a span. It provides convenient methods for interacting with tracing
+// information. The SpanContext is designed to be used wherever tracing context
+// needs to be passed or extracted within an application.
 type SpanContext struct {
 	ctx context.Context
 }
@@ -88,4 +97,36 @@ func (sc *SpanContext) SpanID() string {
 // Context returns the SpanContext's underlying context.
 func (sc *SpanContext) Context() context.Context {
 	return sc.ctx
+}
+
+// ComponentLibrary represents a specific library or component where
+// the current span is running. This type helps identify the origin of
+// the span within SkyWalking's tracing UI, making it easier to
+// debug and understand distributed traces.
+//
+// Each library or component is associated with a unique identifier
+// that is displayed in the SkyWalking UI. These identifiers allow
+// developers to distinguish between various technologies in use
+// within their traced application.
+//
+// A complete list of available component libraries and their IDs can
+// be found in the SkyWalking repository:
+// https://github.com/apache/skywalking/blob/master/oap-server/server-starter/src/main/resources/component-libraries.yml
+type ComponentLibrary int32
+
+// Predefined constants representing commonly used libraries/components.
+// These values correspond to the IDs specified in SkyWalking's component library file.
+
+const (
+	Unknown      ComponentLibrary = 0
+	GoRedis      ComponentLibrary = 7
+	PostgreSQL   ComponentLibrary = 22
+	GoKafka      ComponentLibrary = 27
+	RabbitMQ     ComponentLibrary = 51
+	GoHttpServer ComponentLibrary = 5004
+	GoMysql      ComponentLibrary = 5012
+)
+
+func (c ComponentLibrary) AsInt32() int32 {
+	return int32(c)
 }
