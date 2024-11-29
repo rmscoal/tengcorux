@@ -71,3 +71,8 @@ func (t *Tracer) SpanFromContext(ctx context.Context) tengcoruxTracer.Span {
 
 	return span
 }
+
+// Recorder returns tracer's recorder helping on retrieving the generated spans.
+func (t *Tracer) Recorder() *SpanRecorder {
+	return t.recorder
+}
