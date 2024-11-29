@@ -36,6 +36,7 @@ func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...tengcoruxTr
 		SpanID:    newRandomIntegerID(),
 		Layer:     spanConfig.SpanLayer,
 		Type:      spanConfig.SpanType,
+		tracer:    t,
 	}
 
 	// Search for the previous span in the context and adjust values

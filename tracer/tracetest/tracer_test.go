@@ -44,6 +44,8 @@ func TestTracer_StartSpan(t *testing.T) {
 		t.Fatal("expected unknown layer")
 	} else if testSpan.Type != tengcoruxTracer.SpanTypeLocal {
 		t.Fatal("expected local span")
+	} else if testSpan.tracer == nil {
+		t.Fatal("expected non-nil tracer")
 	}
 
 	// Checks the context whether it contains prevSpanKey.
