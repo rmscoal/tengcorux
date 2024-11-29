@@ -26,9 +26,12 @@ func TestSpanRecorder_OnStart(t *testing.T) {
 func TestSpanRecorder_OnEnd(t *testing.T) {
 	recorder := NewSpanRecorder()
 
+	startTime := time.Now().Add(-1 * time.Second)
+	endTime := startTime.Add(1 * time.Second)
+
 	span := &Span{
-		StartTime: time.Now().Add(-1 * time.Second),
-		EndTime:   time.Now(),
+		StartTime: startTime,
+		EndTime:   endTime,
 		Name:      "testing",
 		TraceID:   1,
 		SpanID:    2,
@@ -38,6 +41,17 @@ func TestSpanRecorder_OnEnd(t *testing.T) {
 	ended := recorder.EndedSpans()
 	if len(ended) != 1 {
 		t.Fatalf("got %d spans, want 1", len(ended))
+	}
+
+	// Validate time order and duration
+	recordedSpan := ended[0]
+	expectedDuration := endTime.Sub(startTime)
+
+	if !recordedSpan.EndTime.After(recordedSpan.StartTime) {
+		t.Error("end time should be after start time")
+	}
+	if recordedSpan.EndTime.Sub(recordedSpan.StartTime) != expectedDuration {
+		t.Error("incorrect span duration")
 	}
 }
 
