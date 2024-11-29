@@ -13,6 +13,9 @@ import (
 
 type tracing struct {
 	provider tracer.Tracer
+
+	// configs
+	showSQLVariable bool
 }
 
 // NewPlugin returns a tracing instance that could be called during
@@ -100,9 +103,15 @@ func (t *tracing) after() func(*gorm.DB) {
 		// 3. DB Name
 		// 4. Dialect
 		// 5. Record error if there are any
+		var dbStmtAttr attribute.KeyValue
+		if t.showSQLVariable {
+			dbStmtAttr = attribute.DBStatement(tx.Dialector.Explain(tx.Statement.SQL.String(), tx.Statement.Vars...))
+
+		} else {
+			dbStmtAttr = attribute.DBStatement(tx.Statement.SQL.String())
+		}
 		span.SetAttributes(
-			attribute.DBStatement(
-				tx.Dialector.Explain(tx.Statement.SQL.String(), tx.Statement.Vars...)),
+			dbStmtAttr,
 			attribute.DBTable(tx.Statement.Table),
 			attribute.DBName(tx.Name()),
 			attribute.DBSystem(mapDBSystem(tx.Dialector.Name())),

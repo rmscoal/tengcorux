@@ -24,8 +24,27 @@ func (userModel) TableName() string {
 	return "users"
 }
 
+func TestTracingOption(t *testing.T) {
+	t.Run("WithTracer", func(t *testing.T) {
+		plugin := NewPlugin(WithTracer(nil))
+		tr := plugin.(*tracing)
+		if tr.provider != nil {
+			t.Fatalf("expected nil tracing provider")
+		}
+	})
+
+	t.Run("WithSQLVariables", func(t *testing.T) {
+		plugin := NewPlugin(WithSQLVariables())
+		tr := plugin.(*tracing)
+		if tr.showSQLVariable == false {
+			t.Fatalf("expected showSQLVariable to be true")
+		}
+	})
+}
+
 type testCases struct {
 	name          string
+	extraOptions  []Option
 	queryFunc     func(ctx context.Context, db *gorm.DB) error
 	expectedSpans func(t *testing.T, spans []*tracetest.ReadOnlySpan)
 }
@@ -33,7 +52,8 @@ type testCases struct {
 func TestTracing(t *testing.T) {
 	tests := []testCases{
 		{
-			name: "QUERY",
+			name:         "QUERY",
+			extraOptions: []Option{WithSQLVariables()},
 			queryFunc: func(ctx context.Context, db *gorm.DB) error {
 				var user userModel
 				return db.WithContext(ctx).
@@ -58,6 +78,9 @@ func TestTracing(t *testing.T) {
 					case attribute.DBStatementKey:
 						if !strings.Contains(val, "SELECT id, name FROM `users`") {
 							t.Fatalf("unexpected query statement, got %s", val)
+						}
+						if !strings.Contains(val, "phone_number = 1234") {
+							t.Fatalf("WithSQLVariables option was passed, expected vars to be included, got %s", val)
 						}
 					case attribute.DBTableKey:
 						if val != "users" {
@@ -128,6 +151,9 @@ func TestTracing(t *testing.T) {
 					case attribute.DBStatementKey:
 						if !strings.Contains(val, "UPDATE `users` SET") {
 							t.Fatalf("unexpected query statement, got %s", val)
+						}
+						if strings.Contains(val, "WHERE `id` = 1") {
+							t.Fatalf("WithSQLVariables option was not passed, expected vars to not be included, got %s", val)
 						}
 					case attribute.DBTableKey:
 						if val != "users" {
@@ -253,10 +279,10 @@ func TestTracing(t *testing.T) {
 				t.Fatalf("failed to migrate database: %v", err)
 			}
 
+			db = db.Debug() // Set to debug mode
 			tracer := tracetest.NewTracer()
-			err = db.Use(NewPlugin(
-				WithTracer(tracer),
-			))
+			test.extraOptions = append(test.extraOptions, WithTracer(tracer))
+			err = db.Use(NewPlugin(test.extraOptions...))
 			if err != nil {
 				t.Fatalf("failed to register tracing gorm middleware: %v", err)
 			}

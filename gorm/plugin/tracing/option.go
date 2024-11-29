@@ -10,3 +10,9 @@ func WithTracer(tracer tracer.Tracer) Option {
 		t.provider = tracer
 	}
 }
+
+func WithSQLVariables() Option {
+	return func(t *tracing) {
+		t.showSQLVariable = true
+	}
+}
