@@ -273,6 +273,13 @@ func TestTracing(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to connect database: %v", err)
 			}
+			t.Cleanup(func() { // Close DB during cleanup
+				sqlDB, err := db.DB()
+				if err != nil {
+					t.Fatalf("failed to connect database: %v", err)
+				}
+				_ = sqlDB.Close()
+			})
 
 			err = db.AutoMigrate(&userModel{})
 			if err != nil {
