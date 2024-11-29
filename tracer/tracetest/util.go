@@ -1,9 +1,12 @@
 package tracetest
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
 
-// newRandomIntegerID generate a random integer ID. Please note, that it might
-// not be the most cryptic random integers generated.
+var globalRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 func newRandomIntegerID() uint64 {
-	return uint64(rand.Uint32())<<32 + uint64(rand.Uint32())
+	return uint64(globalRand.Uint32())<<32 + uint64(globalRand.Uint32())
 }
