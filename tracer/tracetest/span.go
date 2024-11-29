@@ -98,5 +98,5 @@ func (c *SpanContext) SpanID() string {
 		return ""
 	}
 
-	return strconv.FormatUint(span.TraceID, 10)
+	return strconv.FormatUint(span.SpanID, 10)
 }
