@@ -1,6 +1,8 @@
 package tracetest
 
 import (
+	"context"
+	"strconv"
 	"time"
 
 	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
@@ -20,13 +22,17 @@ type Span struct {
 	Type         tengcoruxTracer.SpanType
 	Error        error
 
-	tracer *Tracer
+	tracer      *Tracer
+	spanContext *SpanContext
 }
 
 // End ends the span by marking the EndTime as now as well as
 // appending the current span to the ended list of span by the
 // SpanRecorder.
 func (s *Span) End() {
+	if !s.EndTime.IsZero() {
+		return
+	}
 	s.EndTime = time.Now()
 	s.tracer.recorder.OnEnd(s)
 }
@@ -46,9 +52,9 @@ func (s *Span) AddEvent(events ...string) {
 	s.Events = append(s.Events, events...)
 }
 
-// Context returns nil.
+// Context returns SpanContext.
 func (s *Span) Context() tengcoruxTracer.SpanContext {
-	return nil
+	return s.spanContext
 }
 
 // ReadWriteSpan allows the span to be read and written.
@@ -62,3 +68,35 @@ type prevSpanContextKey struct{}
 // prevSpanKey is the key that holds the *Span value inside a context
 // carried along during the transaction.
 var prevSpanKey prevSpanContextKey
+
+// SpanContext stores Go context.
+type SpanContext struct {
+	ctx context.Context
+}
+
+// Context returns Go context.
+func (c *SpanContext) Context() context.Context {
+	return c.ctx
+}
+
+// TraceID searches the prevSpanKey and returns the span's trace id
+// value as string.
+func (c *SpanContext) TraceID() string {
+	span, ok := c.Context().Value(prevSpanKey).(*Span)
+	if !ok {
+		return ""
+	}
+
+	return strconv.FormatUint(span.TraceID, 10)
+}
+
+// SpanID searches the prevSpanKey and returns the span's span id
+// value as string.
+func (c *SpanContext) SpanID() string {
+	span, ok := c.Context().Value(prevSpanKey).(*Span)
+	if !ok {
+		return ""
+	}
+
+	return strconv.FormatUint(span.TraceID, 10)
+}

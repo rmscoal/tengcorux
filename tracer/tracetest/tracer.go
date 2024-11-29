@@ -41,13 +41,14 @@ func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...tengcoruxTr
 	// Search for the previous span in the context and adjust values
 	// for current span if found.
 	prevSpan, exists := ctx.Value(prevSpanKey).(*Span)
-	if !exists && prevSpan != nil {
+	if exists && prevSpan != nil {
 		span.TraceID = prevSpan.TraceID
 		span.ParentSpanID = prevSpan.SpanID
 	}
 
 	// Replaces the context's prevSpanKey with the current span.
 	ctx = context.WithValue(ctx, prevSpanKey, span)
+	span.spanContext = &SpanContext{ctx: ctx}
 	t.recorder.OnStart(span)
 
 	return ctx, span

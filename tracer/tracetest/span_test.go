@@ -1,6 +1,7 @@
 package tracetest
 
 import (
+	"context"
 	"errors"
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"testing"
@@ -77,9 +78,43 @@ func TestSpan_RecordError(t *testing.T) {
 }
 
 func TestSpan_Context(t *testing.T) {
-	span := &Span{}
+	span := &Span{
+		spanContext: &SpanContext{
+			ctx: context.Background(),
+		},
+	}
 	ctx := span.Context()
-	if ctx != nil {
-		t.Error("expected context to be nil")
+	if ctx == nil {
+		t.Error("expected context to be non-nil")
+	}
+}
+
+func TestSpanContext_Context(t *testing.T) {
+	tracer := NewTracer()
+	_, span := tracer.StartSpan(context.Background(), "hello")
+
+	ctx := span.Context().Context()
+	if ctx == nil {
+		t.Error("expected context to be non-nil")
+	}
+}
+
+func TestSpanContext_TraceID(t *testing.T) {
+	tracer := NewTracer()
+	_, span := tracer.StartSpan(context.Background(), "hello")
+
+	sc := span.Context()
+	if sc.TraceID() == "" {
+		t.Error("expected trace ID to be non-empty string")
+	}
+}
+
+func TestSpanContext_SpanID(t *testing.T) {
+	tracer := NewTracer()
+	_, span := tracer.StartSpan(context.Background(), "hello")
+
+	sc := span.Context()
+	if sc.SpanID() == "" {
+		t.Error("expected trace ID to be non-empty string")
 	}
 }
