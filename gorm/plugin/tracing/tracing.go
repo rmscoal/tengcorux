@@ -123,11 +123,11 @@ func (t *tracing) after() func(*gorm.DB) {
 }
 
 const (
-	MySQL       = "MySQL"
-	MsSQL       = "Microsoft SQL Server"
-	PostgresSQL = "PostgresSQL"
-	SQLite      = "SQLite"
-	SQLServer   = "SQL Server"
+	MySQL      = "MySQL"
+	MsSQL      = "Microsoft SQL Server"
+	PostgreSQL = "PostgreSQL"
+	SQLite     = "SQLite"
+	SQLServer  = "SQL Server"
 )
 
 // mapDBSystem maps a know dialect that are often used with GORM. The provided
@@ -140,7 +140,7 @@ func mapDBSystem(name string) string {
 	case "mssql":
 		return MsSQL
 	case "postgres", "postgresql", "pgx":
-		return PostgresSQL
+		return PostgreSQL
 	case "sqlite":
 		return SQLite
 	case "sqlserver":

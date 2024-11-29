@@ -291,15 +291,15 @@ func TestMapDBSystem(t *testing.T) {
 		},
 		{
 			input: "postgres",
-			want:  PostgresSQL,
+			want:  PostgreSQL,
 		},
 		{
 			input: "postgresql",
-			want:  PostgresSQL,
+			want:  PostgreSQL,
 		},
 		{
 			input: "pgx",
-			want:  PostgresSQL,
+			want:  PostgreSQL,
 		},
 		{
 			input: "sqlite",
