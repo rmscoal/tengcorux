@@ -37,7 +37,7 @@ func TestSkyWalking_New(t *testing.T) {
 }
 
 func TestSkyWalking_EndToEnd(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, err := startTestingTracer()
 	if err != nil {

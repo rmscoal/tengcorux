@@ -9,7 +9,7 @@ import (
 )
 
 func TestSkyWalkingSpan_End(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, _ := startTestingTracer()
 	ctx, span := tracer.StartSpan(context.Background(), "testing")
@@ -21,7 +21,7 @@ func TestSkyWalkingSpan_End(t *testing.T) {
 }
 
 func TestSkyWalkingSpan_SetAttributes(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, _ := startTestingTracer()
 	ctx, span := tracer.StartSpan(context.Background(), "testing")
@@ -33,7 +33,7 @@ func TestSkyWalkingSpan_SetAttributes(t *testing.T) {
 }
 
 func TestSkyWalkingSpan_RecordError(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, _ := startTestingTracer()
 	ctx, span := tracer.StartSpan(context.Background(), "testing")
@@ -45,7 +45,7 @@ func TestSkyWalkingSpan_RecordError(t *testing.T) {
 }
 
 func TestSkyWalkingSpan_AddEvent(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, _ := startTestingTracer()
 	ctx, span := tracer.StartSpan(context.Background(), "testing")
@@ -57,7 +57,7 @@ func TestSkyWalkingSpan_AddEvent(t *testing.T) {
 }
 
 func TestSkyWalkingSpan_Context(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, _ := startTestingTracer()
 	ctx, span := tracer.StartSpan(context.Background(), "testing")
@@ -72,7 +72,7 @@ func TestSkyWalkingSpan_Context(t *testing.T) {
 }
 
 func TestSkyWalkingSpanContext(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, _ := startTestingTracer()
 	ctx, span := tracer.StartSpan(context.Background(), "testing")
