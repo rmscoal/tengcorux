@@ -40,6 +40,10 @@ func (t *Tracer) Shutdown(_ context.Context) error {
 
 func (t *Tracer) SpanFromContext(ctx context.Context) tengcoruxTracer.Span {
 	go2skySpan := go2sky.ActiveSpan(ctx)
+	if go2skySpan == nil {
+		return nil
+	}
+
 	return &Span{
 		tracer: t,
 		span:   go2skySpan,

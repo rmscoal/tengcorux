@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/SkyAPM/go2sky v1.5.0
-	github.com/rmscoal/tengcorux/tracer v0.1.2
+	github.com/rmscoal/tengcorux/tracer v0.1.4
 	skywalking.apache.org/repo/goapi v0.0.0-20220401015832-2c9eee9481eb
 )
 

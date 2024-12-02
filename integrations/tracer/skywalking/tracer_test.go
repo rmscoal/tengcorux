@@ -11,7 +11,7 @@ import (
 )
 
 func TestSkyWalkingTracer_StartSpan(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, err := startTestingTracer()
 	if err != nil {
@@ -80,7 +80,7 @@ func TestSkyWalkingTracer_StartSpan(t *testing.T) {
 }
 
 func TestSkyWalkingTracer_Shutdown(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer, err := startTestingTracer()
 	if err != nil {
@@ -98,42 +98,52 @@ func TestSkyWalkingTracer_Shutdown(t *testing.T) {
 }
 
 func TestSkyWalkingTracer_SpanFromContext(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
-	tracer, _ := startTestingTracer()
-	ctx, firstSpan := tracer.StartSpan(context.Background(), "testing",
-		tengcoruxTracer.WithSpanLayer(tengcoruxTracer.SpanLayerDatabase),
-		tengcoruxTracer.WithSpanType(tengcoruxTracer.SpanTypeExit),
-	)
-	secondSpan := tracer.SpanFromContext(ctx)
+	t.Run("EmptyContext", func(t *testing.T) {
+		tracer, _ := startTestingTracer()
+		span := tracer.SpanFromContext(context.Background())
+		if span != nil {
+			t.Error("span should be nil")
+		}
+	})
 
-	firstReportedSpan, ok := firstSpan.(*Span).span.(go2sky.ReportedSpan)
-	if !ok {
-		t.Error("firstReportedSpan should be of type ReportedSpan")
-	}
+	t.Run("ContinueSpan", func(t *testing.T) {
+		tracer, _ := startTestingTracer()
+		ctx, firstSpan := tracer.StartSpan(context.Background(), "testing",
+			tengcoruxTracer.WithSpanLayer(tengcoruxTracer.SpanLayerDatabase),
+			tengcoruxTracer.WithSpanType(tengcoruxTracer.SpanTypeExit),
+		)
+		secondSpan := tracer.SpanFromContext(ctx)
 
-	secondReportedSpan, ok := secondSpan.(*Span).span.(go2sky.ReportedSpan)
-	if !ok {
-		t.Error("secondReportedSpan should be of type ReportedSpan")
-	}
+		firstReportedSpan, ok := firstSpan.(*Span).span.(go2sky.ReportedSpan)
+		if !ok {
+			t.Error("firstReportedSpan should be of type ReportedSpan")
+		}
 
-	if firstReportedSpan.OperationName() != secondReportedSpan.OperationName() {
-		t.Error("firstReportedSpan should have the same operation name with the secondReportedSpan")
-	}
+		secondReportedSpan, ok := secondSpan.(*Span).span.(go2sky.ReportedSpan)
+		if !ok {
+			t.Error("secondReportedSpan should be of type ReportedSpan")
+		}
 
-	if firstReportedSpan.SpanLayer() != secondReportedSpan.SpanLayer() {
-		t.Error("firstReportedSpan should have the same span layer with the secondReportedSpan")
-	}
+		if firstReportedSpan.OperationName() != secondReportedSpan.OperationName() {
+			t.Error("firstReportedSpan should have the same operation name with the secondReportedSpan")
+		}
 
-	if firstReportedSpan.SpanType() != secondReportedSpan.SpanType() {
-		t.Error("firstReportedSpan should have the same span type with the secondReportedSpan")
-	}
+		if firstReportedSpan.SpanLayer() != secondReportedSpan.SpanLayer() {
+			t.Error("firstReportedSpan should have the same span layer with the secondReportedSpan")
+		}
+
+		if firstReportedSpan.SpanType() != secondReportedSpan.SpanType() {
+			t.Error("firstReportedSpan should have the same span type with the secondReportedSpan")
+		}
+	})
 }
 
 ////////////// Testing Tracer's PRIVATE METHODS //////////////////
 
 func TestGenerateSkyWalkingOptions(t *testing.T) {
-	defer t.Cleanup(recoverPanic(t))
+	defer recoverPanic(t)
 
 	tracer := &Tracer{}
 
