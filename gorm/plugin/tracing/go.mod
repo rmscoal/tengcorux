@@ -1,4 +1,4 @@
-module github.com/rmscoal/tengcorux/gorm/plugin/tracer
+module github.com/rmscoal/tengcorux/gorm/plugin/tracing
 
 go 1.21
 
