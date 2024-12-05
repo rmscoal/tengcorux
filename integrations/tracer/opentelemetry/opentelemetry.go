@@ -32,6 +32,11 @@ func NewTracer(serviceName string, opts ...Option) *Tracer {
 	return tracer
 }
 
+// Version returns the current tracer's version
+func (t *Tracer) Version() string {
+	return "v0.1.0"
+}
+
 type Option func(*Tracer)
 
 // WithExporter we'll use the given exporter are the tracer provider. This enables
@@ -46,7 +51,8 @@ func WithExporter(exporter sdktrace.SpanExporter) Option {
 	}
 }
 
-// WithEnvironment exports the environment settings later in the trace.
+// WithEnvironment exports the environment settings later in the trace
+// that will be embedded into the service name with a ":" separator.
 func WithEnvironment(env string) Option {
 	return func(tracer *Tracer) {
 		tracer.environment = env
