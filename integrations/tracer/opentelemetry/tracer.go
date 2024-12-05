@@ -13,6 +13,7 @@ type Tracer struct {
 	environment string
 }
 
+// StartSpan starts a new Span with the given name and option.
 func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...tengcoruxTracer.StartSpanOption) (context.Context, tengcoruxTracer.Span) {
 	startSpanConfig := tengcoruxTracer.DefaultStartSpanConfig()
 	for _, opt := range opts {
@@ -32,6 +33,7 @@ func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...tengcoruxTr
 	}
 }
 
+// Shutdown closes all the exporter shutdowns with the given context.
 func (t *Tracer) Shutdown(ctx context.Context) error {
 	for _, shutdown := range t.shutdowns {
 		if err := shutdown(ctx); err != nil {
