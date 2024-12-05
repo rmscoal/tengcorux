@@ -46,9 +46,6 @@ func (t *Tracer) Shutdown(ctx context.Context) error {
 // although a noop span by otel.
 func (t *Tracer) SpanFromContext(ctx context.Context) tengcoruxTracer.Span {
 	span := trace.SpanFromContext(ctx)
-	if span == nil {
-		return nil
-	}
 
 	// NOTE: otel trace always return a span, however when the context is empty
 	// it returns a noop span instead. Should we return nil if it is a noop or
