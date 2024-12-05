@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"io"
+	"strings"
+	"testing"
+
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"github.com/rmscoal/tengcorux/tracer/tracetest"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"io"
-	"strings"
-	"testing"
 )
 
 type userModel struct {

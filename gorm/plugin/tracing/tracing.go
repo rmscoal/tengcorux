@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"io"
+
 	"github.com/rmscoal/tengcorux/tracer"
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"gorm.io/gorm"
-	"io"
 )
 
 type tracing struct {
@@ -34,6 +35,11 @@ func NewPlugin(opts ...Option) gorm.Plugin {
 	}
 
 	return t
+}
+
+// Version describes the current gorm tracing package version.
+func (t *tracing) Version() string {
+	return "v0.1.0"
 }
 
 // Name returns the plugin name as required by gorm.Plugin.
