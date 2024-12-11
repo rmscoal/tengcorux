@@ -2,62 +2,121 @@ package tracing
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"testing"
 
-	"github.com/go-redis/redismock/v9"
 	"github.com/redis/go-redis/v9"
 	"github.com/rmscoal/tengcorux/tracer"
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"github.com/rmscoal/tengcorux/tracer/tracetest"
 )
 
-func TestInstrumentTracing(t *testing.T) {
-	defer func() {
-		if err := recover(); err != nil {
-			t.Fatal(err)
+func TestNewHook_Options(t *testing.T) {
+	t.Run("WithAttributes", func(t *testing.T) {
+		hook := NewHook(WithAttributes(attribute.KeyValuePair("ho", "ok")))
+		if len(hook.spanAttributes) != 2 {
+			t.Errorf("expecting 2 span attributes field, got %d",
+				len(hook.spanAttributes))
 		}
-	}()
+	})
 
-	tt := tracetest.NewTracer()
-	tracer.SetGlobalTracer(tt)
+	t.Run("WithConnectionString", func(t *testing.T) {
+		hook := NewHook(WithConnectionString("redis://localhost:6379"))
+		if len(hook.spanAttributes) > 1 {
+			t.Errorf("expecting 1 span attribute, got %d, it should not create new because not enabled",
+				len(hook.spanAttributes))
+		}
 
-	db, mock := redismock.NewClientMock()
-	err := InstrumentTracing(db)
-	if err != nil {
-		t.Fatal(err)
-	}
+		hook = NewHook(IncludeAddress(true),
+			WithConnectionString("redis://localhost:6379"))
+		if len(hook.spanAttributes) != 2 {
+			t.Errorf("expecting 2 span attributes field, got %d",
+				len(hook.spanAttributes))
+		}
+	})
 
-	mock.ExpectSet("some_key", "some_value", 0).RedisNil()
+	t.Run("WithClientType", func(t *testing.T) {
+		hook := NewHook(WithClientType("random"))
+		if len(hook.spanAttributes) > 1 {
+			t.Errorf("expecting 1 span attribute, got %d, it should not create new because mistaken type",
+				len(hook.spanAttributes))
+		}
 
-	err = db.Set(context.TODO(), "some_key", "some_value", 0).Err()
-	if err != nil && !errors.Is(err, redis.Nil) {
-		t.Fatal(err)
-	}
+		hook = NewHook(WithClientType("client"))
+		if len(hook.spanAttributes) != 2 {
+			t.Errorf("expecting 2 span attributes field, got %d, client is valid type",
+				len(hook.spanAttributes))
+		}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatal(err)
-	}
+		hook = NewHook(WithClientType("cluster"))
+		if len(hook.spanAttributes) != 2 {
+			t.Errorf("expecting 2 span attributes field, got %d, cluster is valid type",
+				len(hook.spanAttributes))
+		}
 
-	// It does not record ? Perhaps because it is using mock
-	// if len(tt.Recorder().EndedSpans()) == 0 {
-	// 	t.Error("expected spans to be recorded")
-	// }
+		hook = NewHook(WithClientType("ring"))
+		if len(hook.spanAttributes) != 2 {
+			t.Errorf("expecting 2 span attributes field, got %d, ring is valid type",
+				len(hook.spanAttributes))
+		}
+	})
+
+	t.Run("WithServerAddress", func(t *testing.T) {
+		t.Run("Disabled", func(t *testing.T) {
+			hook := NewHook(WithServerAddress("localhost:6379"))
+			if len(hook.spanAttributes) > 1 {
+				t.Errorf("expecting 1 span attribute, got %d, it should not create new because not enabled",
+					len(hook.spanAttributes))
+			}
+		})
+
+		t.Run("Enabled", func(t *testing.T) {
+			hook := NewHook(IncludeAddress(true),
+				WithServerAddress("localhost:6379"))
+			if len(hook.spanAttributes) != 3 {
+				t.Errorf("expecting 3 span attributes field, got %d",
+					len(hook.spanAttributes))
+			}
+		})
+
+		t.Run("IncorrectAddress", func(t *testing.T) {
+			hook := NewHook(IncludeAddress(true),
+				WithServerAddress("redis://localhost:6379"))
+			if len(hook.spanAttributes) != 1 {
+				t.Errorf("expecting 1 span attributes field, got %d",
+					len(hook.spanAttributes))
+			}
+		})
+	})
+
+	t.Run("IncludeAddress", func(t *testing.T) {
+		t.Run("Disabled", func(t *testing.T) {
+			hook := NewHook(WithServerAddress("redis://localhost:6379"),
+				IncludeAddress(false))
+			if len(hook.spanAttributes) > 1 {
+				t.Errorf("expecting 1 span attribute, got %d, it should not create new because not enabled",
+					len(hook.spanAttributes))
+			}
+		})
+
+		t.Run("PreviouslySet", func(t *testing.T) {
+			hook := NewHook(WithServerAddress("localhost:6379"),
+				WithConnectionString("some_connection_string"),
+				IncludeAddress(false))
+			if len(hook.spanAttributes) != 1 {
+				t.Errorf("expecting 1 span attributes field, got %d",
+					len(hook.spanAttributes))
+			}
+		})
+	})
 }
 
 func TestTracingHook_ProcessHook(t *testing.T) {
 	tt := tracetest.NewTracer()
 	tracer.SetGlobalTracer(tt)
 
-	hook := newHook("",
-		WithConnectionString(true),
-		WithAttributes(
-			attribute.KeyValuePair("some_key", "some_value")))
-
-	ctx, span := tracer.StartSpan(context.TODO(), "testing")
+	hook := NewHook()
+	ctx := context.TODO()
 	cmd := redis.NewCmd(ctx, "ping")
-	defer span.End()
 
 	processHook := hook.ProcessHook(func(ctx context.Context, cmd redis.Cmder) error {
 		span := tracer.SpanFromContext(ctx)
@@ -105,11 +164,6 @@ func TestTracingHook_ProcessHook(t *testing.T) {
 				if attr.Value == nil {
 					t.Error("expected code.xxx attribute not be empty")
 				}
-			case "some_key": // _defaultAttributes
-				if attr.Value.(string) != "some_value" {
-					t.Errorf("expected some_value to be some_value but got %s",
-						attr.Value.(string))
-				}
 			}
 		}
 
@@ -126,14 +180,12 @@ func TestTracingHook_ProcessPipelineHook(t *testing.T) {
 	tt := tracetest.NewTracer()
 	tracer.SetGlobalTracer(tt)
 
-	hook := newHook("")
-
-	ctx, span := tracer.StartSpan(context.TODO(), "testing")
-	cmds := []redis.Cmder{
+	hook := NewHook()
+	ctx := context.TODO()
+	commands := []redis.Cmder{
 		redis.NewCmd(ctx, "ping"),
 		redis.NewStringCmd(ctx, "get", "key"),
 	}
-	defer span.End()
 
 	processPipelineHook := hook.ProcessPipelineHook(func(ctx context.Context, cmds []redis.Cmder) error {
 		span := tracer.SpanFromContext(ctx)
@@ -164,7 +216,7 @@ func TestTracingHook_ProcessPipelineHook(t *testing.T) {
 			switch attr.Key {
 			case attribute.DBStatementKey:
 				val := attr.Value.(string)
-				if val != fmt.Sprint("ping\nget key") {
+				if val != "ping\nget key" {
 					t.Errorf("expected val to be ping but got %s", val)
 				}
 			case attribute.DBSystemKey:
@@ -176,18 +228,13 @@ func TestTracingHook_ProcessPipelineHook(t *testing.T) {
 				if attr.Value == nil {
 					t.Error("expected code.xxx attribute not be empty")
 				}
-			case "some_key": // _defaultAttributes
-				if attr.Value.(string) != "some_value" {
-					t.Errorf("expected some_value to be some_value but got %s",
-						attr.Value.(string))
-				}
 			}
 		}
 
 		return nil
 	})
 
-	err := processPipelineHook(ctx, cmds)
+	err := processPipelineHook(ctx, commands)
 	if err != nil {
 		t.Fatal(err)
 	}
