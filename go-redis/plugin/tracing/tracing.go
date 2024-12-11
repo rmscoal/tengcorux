@@ -152,10 +152,11 @@ func InstrumentTracing(rd redis.UniversalClient, opts ...Option) error {
 		rd.OnNewNode(func(rdb *redis.Client) {
 			redisOption := rdb.Options()
 			connString := formatDBConnString(redisOption.Network, redisOption.Addr)
-			options = append(options, WithClientType("cluster"),
+			nodeOptions := append([]Option(nil), options...)
+			nodeOptions = append(nodeOptions, WithClientType("cluster"),
 				WithConnectionString(connString))
 
-			rdb.AddHook(NewHook(options...))
+			rdb.AddHook(NewHook(nodeOptions...))
 		})
 		return nil
 	case *redis.Ring:
