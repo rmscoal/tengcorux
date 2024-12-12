@@ -3,11 +3,12 @@ package opentelemetry
 import (
 	"context"
 	"errors"
+	"testing"
+
 	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/trace"
-	"testing"
 )
 
 func TestSpan(t *testing.T) {

@@ -2,6 +2,7 @@ package opentelemetry
 
 import (
 	"context"
+
 	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -14,14 +15,19 @@ type Tracer struct {
 }
 
 // StartSpan starts a new Span with the given name and option.
-func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...tengcoruxTracer.StartSpanOption) (context.Context, tengcoruxTracer.Span) {
+func (t *Tracer) StartSpan(ctx context.Context, name string,
+	opts ...tengcoruxTracer.StartSpanOption,
+) (context.Context, tengcoruxTracer.Span) {
 	startSpanConfig := tengcoruxTracer.DefaultStartSpanConfig()
 	for _, opt := range opts {
 		opt(startSpanConfig)
 	}
 
-	ctx, span := t.tracer.Start(ctx, name,
-		trace.WithSpanKind(mapSpanKind(startSpanConfig.SpanType, startSpanConfig.SpanLayer)),
+	ctx, span := t.tracer.Start(
+		generateContextFromStartSpanConfig(ctx, startSpanConfig),
+		name,
+		trace.WithSpanKind(mapSpanKind(startSpanConfig.SpanType,
+			startSpanConfig.SpanLayer)),
 	)
 
 	return ctx, &Span{
@@ -62,4 +68,38 @@ func (t *Tracer) SpanFromContext(ctx context.Context) tengcoruxTracer.Span {
 			ctx: ctx,
 		},
 	}
+}
+
+// generateContextFromStartSpanConfig generates a new context only if
+// the start span config given includes a TraceID and/or ParentSpanID.
+func generateContextFromStartSpanConfig(ctx context.Context,
+	tengcoruxStartSpanConfig *tengcoruxTracer.StartSpanConfig,
+) context.Context {
+	if tengcoruxStartSpanConfig.TraceID != "" {
+		traceSpanConfig := trace.SpanContextConfig{
+			Remote:     true,
+			TraceFlags: trace.FlagsSampled,
+		}
+
+		traceID, err := trace.TraceIDFromHex(tengcoruxStartSpanConfig.TraceID)
+		if err == nil {
+			traceSpanConfig.TraceID = traceID
+		}
+
+		if tengcoruxStartSpanConfig.ParentSpanID != "" {
+			spanID, err := trace.SpanIDFromHex(tengcoruxStartSpanConfig.ParentSpanID)
+			if err == nil {
+				traceSpanConfig.SpanID = spanID
+			}
+		}
+
+		// At the end, we check whether the traceID is valid or not
+		// before we generate/replace the given context.
+		if traceSpanConfig.TraceID.IsValid() {
+			traceSpanCtx := trace.NewSpanContext(traceSpanConfig)
+			ctx = trace.ContextWithSpanContext(ctx, traceSpanCtx)
+		}
+	}
+
+	return ctx
 }

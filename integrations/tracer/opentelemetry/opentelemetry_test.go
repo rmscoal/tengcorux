@@ -1,8 +1,9 @@
 package opentelemetry
 
 import (
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"testing"
+
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 )
 
 func TestOpentelemetry_NewTracer(t *testing.T) {
