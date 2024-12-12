@@ -6,7 +6,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -34,7 +33,7 @@ func NewTracer(serviceName string, opts ...Option) *Tracer {
 
 // Version returns the current tracer's version
 func (t *Tracer) Version() string {
-	return "v0.1.0"
+	return "v0.1.1"
 }
 
 type Option func(*Tracer)

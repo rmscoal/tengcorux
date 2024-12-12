@@ -3,12 +3,12 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"time"
 
 	tengcoruxTracer "github.com/rmscoal/tengcorux/tracer"
 	tengcoruxAttribute "github.com/rmscoal/tengcorux/tracer/attribute"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
