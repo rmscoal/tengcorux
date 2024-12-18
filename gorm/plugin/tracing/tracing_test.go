@@ -389,7 +389,9 @@ func TestTracingOption(t *testing.T) {
 			}),
 			WithTracer(tracer),
 		))
-
+		if err != nil {
+			t.Fatalf("failed to register tracing plugin: %v", err)
+		}
 		var count int
 		err = db.WithContext(context.TODO()).Raw("SELECT 1").Scan(&count).Error
 		if err != nil {
