@@ -25,24 +25,6 @@ func (userModel) TableName() string {
 	return "users"
 }
 
-func TestTracingOption(t *testing.T) {
-	t.Run("WithTracer", func(t *testing.T) {
-		plugin := NewPlugin(WithTracer(nil))
-		tr := plugin.(*tracing)
-		if tr.provider != nil {
-			t.Fatalf("expected nil tracing provider")
-		}
-	})
-
-	t.Run("WithSQLVariables", func(t *testing.T) {
-		plugin := NewPlugin(WithSQLVariables())
-		tr := plugin.(*tracing)
-		if tr.showSQLVariable == false {
-			t.Fatalf("expected showSQLVariable to be true")
-		}
-	})
-}
-
 type testCases struct {
 	name          string
 	extraOptions  []Option
@@ -77,19 +59,22 @@ func TestTracing(t *testing.T) {
 							t.Fatalf("want %q, got %q", SQLite, val)
 						}
 					case attribute.DBStatementKey:
-						if !strings.Contains(val, "SELECT id, name FROM `users`") {
+						if !strings.Contains(val,
+							"SELECT id, name FROM `users`") {
 							t.Fatalf("unexpected query statement, got %s", val)
 						}
 						if !strings.Contains(val, "phone_number = 1234") {
-							t.Fatalf("WithSQLVariables option was passed, expected vars to be included, got %s", val)
+							t.Fatalf("WithSQLVariables option was passed, expected vars to be included, got %s",
+								val)
 						}
 					case attribute.DBTableKey:
 						if val != "users" {
 							t.Fatalf("expected a table users but got %s", val)
 						}
 					case attribute.DBOperationKey:
-						if val != "QUERY" {
-							t.Fatalf("expected a QUERY operation but got %s", val)
+						if val != "SELECT" {
+							t.Fatalf("expected a SELECT operation but got %s",
+								val)
 						}
 					}
 				}
@@ -123,8 +108,9 @@ func TestTracing(t *testing.T) {
 							t.Fatalf("expected a table users but got %s", val)
 						}
 					case attribute.DBOperationKey:
-						if val != "CREATE" {
-							t.Fatalf("expected a CREATE operation but got %s", val)
+						if val != "INSERT" {
+							t.Fatalf("expected a INSERT operation but got %s",
+								val)
 						}
 					}
 				}
@@ -154,7 +140,8 @@ func TestTracing(t *testing.T) {
 							t.Fatalf("unexpected query statement, got %s", val)
 						}
 						if strings.Contains(val, "WHERE `id` = 1") {
-							t.Fatalf("WithSQLVariables option was not passed, expected vars to not be included, got %s", val)
+							t.Fatalf("WithSQLVariables option was not passed, expected vars to not be included, got %s",
+								val)
 						}
 					case attribute.DBTableKey:
 						if val != "users" {
@@ -162,7 +149,8 @@ func TestTracing(t *testing.T) {
 						}
 					case attribute.DBOperationKey:
 						if val != "UPDATE" {
-							t.Fatalf("expected a UPDATE operation but got %s", val)
+							t.Fatalf("expected a UPDATE operation but got %s",
+								val)
 						}
 					}
 				}
@@ -197,7 +185,8 @@ func TestTracing(t *testing.T) {
 						}
 					case attribute.DBOperationKey:
 						if val != "DELETE" {
-							t.Fatalf("expected a DELETE operation but got %s", val)
+							t.Fatalf("expected a DELETE operation but got %s",
+								val)
 						}
 					}
 				}
@@ -270,7 +259,8 @@ func TestTracing(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// Setting up DB, tracing, registration of plugin and check
 			// whether the plugin has been registered successfully.
-			db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+			db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"),
+				&gorm.Config{})
 			if err != nil {
 				t.Fatalf("failed to connect database: %v", err)
 			}
@@ -356,6 +346,63 @@ func TestMapDBSystem(t *testing.T) {
 			t.FailNow()
 		}
 	}
+}
+
+func TestTracingOption(t *testing.T) {
+	t.Run("WithTracer", func(t *testing.T) {
+		plugin := NewPlugin(WithTracer(nil))
+		tr := plugin.(*tracing)
+		if tr.provider != nil {
+			t.Fatalf("expected nil tracing provider")
+		}
+	})
+
+	t.Run("WithSQLVariables", func(t *testing.T) {
+		plugin := NewPlugin(WithSQLVariables())
+		tr := plugin.(*tracing)
+		if tr.showSQLVariable == false {
+			t.Fatalf("expected showSQLVariable to be true")
+		}
+	})
+
+	t.Run("WithSpanNameGenerator", func(t *testing.T) {
+		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"),
+			&gorm.Config{})
+		if err != nil {
+			t.Fatalf("failed to connect database: %v", err)
+		}
+		defer func() { // Close DB during cleanup
+			sqlDB, err := db.DB()
+			if err != nil {
+				t.Fatalf("failed to connect database: %v", err)
+			}
+			_ = sqlDB.Close()
+		}()
+
+		db = db.Debug() // Set to debug mode
+		tracer := tracetest.NewTracer()
+		err = db.Use(NewPlugin(
+			WithSpanNameGenerator(func(
+				callbackName string, tx *gorm.DB,
+			) string {
+				return "hello_world"
+			}),
+			WithTracer(tracer),
+		))
+
+		var count int
+		err = db.WithContext(context.TODO()).Raw("SELECT 1").Scan(&count).Error
+		if err != nil {
+			t.Fatalf("failed to query database: %v", err)
+		}
+		spans := tracer.Recorder().EndedSpans()
+		if len(spans) != 1 {
+			t.Fatalf("want 1 span, got %d", len(spans))
+		}
+		if spans[0].Name != "hello_world" {
+			t.Errorf("want %q, got %q", "hello_world", spans[0].Name)
+		}
+	})
 }
 
 func checkGormError(t *testing.T, err error) {

@@ -6,17 +6,31 @@ import (
 	"database/sql/driver"
 	"errors"
 	"io"
+	"strings"
 
 	"github.com/rmscoal/tengcorux/tracer"
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"gorm.io/gorm"
 )
 
+// SpanNameGenerator is a function where user can customize their span name.
+type SpanNameGenerator func(callbackName string, tx *gorm.DB) string
+
+var _defaultSpanNameGenerator SpanNameGenerator = func(
+	callbackName string,
+	tx *gorm.DB,
+) string {
+	return callbackName
+}
+
+// tracing implements gorm.Plugin becoming
+// main struct for this package.
 type tracing struct {
 	provider tracer.Tracer
 
 	// configs
-	showSQLVariable bool
+	showSQLVariable   bool
+	spanNameGenerator SpanNameGenerator
 }
 
 // NewPlugin returns a tracing instance that could be called during
@@ -27,7 +41,8 @@ type tracing struct {
 // This will register the tracing within gorm's callbacks.
 func NewPlugin(opts ...Option) gorm.Plugin {
 	t := &tracing{
-		provider: tracer.GetGlobalTracer(),
+		provider:          tracer.GetGlobalTracer(),
+		spanNameGenerator: _defaultSpanNameGenerator,
 	}
 
 	for _, opt := range opts {
@@ -35,11 +50,6 @@ func NewPlugin(opts ...Option) gorm.Plugin {
 	}
 
 	return t
-}
-
-// Version describes the current gorm tracing package version.
-func (t *tracing) Version() string {
-	return "v0.1.0"
 }
 
 // Name returns the plugin name as required by gorm.Plugin.
@@ -54,28 +64,52 @@ func (t *tracing) Initialize(db *gorm.DB) error {
 	var errs error
 
 	// QUERY
-	errs = errors.Join(errs, db.Callback().Query().Before("gorm:query").Register("tracing:before:query", t.before("QUERY")))
-	errs = errors.Join(errs, db.Callback().Query().After("gorm:query").Register("tracing:after:query", t.after()))
+	errs = errors.Join(errs,
+		db.Callback().Query().Before("gorm:query").Register("tracing:before:query",
+			t.before("SQL SELECT")))
+	errs = errors.Join(errs,
+		db.Callback().Query().After("gorm:query").Register("tracing:after:query",
+			t.after()))
 
 	// CREATE
-	errs = errors.Join(errs, db.Callback().Create().Before("gorm:create").Register("tracing:before:create", t.before("CREATE")))
-	errs = errors.Join(errs, db.Callback().Create().After("gorm:create").Register("tracing:after:create", t.after()))
+	errs = errors.Join(errs,
+		db.Callback().Create().Before("gorm:create").Register("tracing:before:create",
+			t.before("SQL INSERT")))
+	errs = errors.Join(errs,
+		db.Callback().Create().After("gorm:create").Register("tracing:after:create",
+			t.after()))
 
 	// UPDATE
-	errs = errors.Join(errs, db.Callback().Update().Before("gorm:update").Register("tracing:before:update", t.before("UPDATE")))
-	errs = errors.Join(errs, db.Callback().Update().After("gorm:update").Register("tracing:after:update", t.after()))
+	errs = errors.Join(errs,
+		db.Callback().Update().Before("gorm:update").Register("tracing:before:update",
+			t.before("SQL UPDATE")))
+	errs = errors.Join(errs,
+		db.Callback().Update().After("gorm:update").Register("tracing:after:update",
+			t.after()))
 
 	// DELETE
-	errs = errors.Join(errs, db.Callback().Delete().Before("gorm:delete").Register("tracing:before:delete", t.before("DELETE")))
-	errs = errors.Join(errs, db.Callback().Delete().After("gorm:delete").Register("tracing:after:delete", t.after()))
+	errs = errors.Join(errs,
+		db.Callback().Delete().Before("gorm:delete").Register("tracing:before:delete",
+			t.before("SQL DELETE")))
+	errs = errors.Join(errs,
+		db.Callback().Delete().After("gorm:delete").Register("tracing:after:delete",
+			t.after()))
 
 	// ROW
-	errs = errors.Join(errs, db.Callback().Row().Before("gorm:row").Register("tracing:before:row", t.before("ROW")))
-	errs = errors.Join(errs, db.Callback().Row().After("gorm:row").Register("tracing:after:row", t.after()))
+	errs = errors.Join(errs,
+		db.Callback().Row().Before("gorm:row").Register("tracing:before:row",
+			t.before("SQL ROW")))
+	errs = errors.Join(errs,
+		db.Callback().Row().After("gorm:row").Register("tracing:after:row",
+			t.after()))
 
 	// RAW
-	errs = errors.Join(errs, db.Callback().Raw().Before("gorm:raw").Register("tracing:before:raw", t.before("RAW")))
-	errs = errors.Join(errs, db.Callback().Raw().After("gorm:raw").Register("tracing:after:raw", t.after()))
+	errs = errors.Join(errs,
+		db.Callback().Raw().Before("gorm:raw").Register("tracing:before:raw",
+			t.before("SQL RAW")))
+	errs = errors.Join(errs,
+		db.Callback().Raw().After("gorm:raw").Register("tracing:after:raw",
+			t.after()))
 
 	return errs
 }
@@ -87,8 +121,9 @@ var operationNameKey struct{}
 func (t *tracing) before(operationName string) func(*gorm.DB) {
 	return func(tx *gorm.DB) {
 		tx.Statement.Context, _ = t.provider.StartSpan(
-			context.WithValue(tx.Statement.Context, operationNameKey, operationName),
-			operationName,
+			context.WithValue(tx.Statement.Context, operationNameKey,
+				operationName),
+			t.spanNameGenerator(operationName, tx),
 			tracer.WithSpanType(tracer.SpanTypeLocal),
 			tracer.WithSpanLayer(tracer.SpanLayerDatabase),
 		)
@@ -111,7 +146,8 @@ func (t *tracing) after() func(*gorm.DB) {
 		// 5. Record error if there are any
 		var dbStmtAttr attribute.KeyValue
 		if t.showSQLVariable {
-			dbStmtAttr = attribute.DBStatement(tx.Dialector.Explain(tx.Statement.SQL.String(), tx.Statement.Vars...))
+			dbStmtAttr = attribute.DBStatement(tx.Dialector.Explain(tx.Statement.SQL.String(),
+				tx.Statement.Vars...))
 
 		} else {
 			dbStmtAttr = attribute.DBStatement(tx.Statement.SQL.String())
@@ -121,7 +157,13 @@ func (t *tracing) after() func(*gorm.DB) {
 			attribute.DBTable(tx.Statement.Table),
 			attribute.DBName(tx.Name()),
 			attribute.DBSystem(mapDBSystem(tx.Dialector.Name())),
-			attribute.DBOperation(tx.Statement.Context.Value(operationNameKey)),
+			attribute.DBOperation(
+				strings.ReplaceAll(
+					tx.Statement.Context.Value(operationNameKey).(string),
+					"SQL ",
+					"")),
+			attribute.KeyValuePair("gorm.plugin.package",
+				t.Name()+"@"+t.Version()),
 		)
 
 		switch {
