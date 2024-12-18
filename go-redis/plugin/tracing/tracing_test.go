@@ -2,6 +2,8 @@ package tracing
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"testing"
 
 	"github.com/redis/go-redis/v9"
@@ -118,7 +120,9 @@ func TestTracingHook_ProcessHook(t *testing.T) {
 	ctx := context.TODO()
 	cmd := redis.NewCmd(ctx, "ping")
 
-	processHook := hook.ProcessHook(func(ctx context.Context, cmd redis.Cmder) error {
+	processHook := hook.ProcessHook(func(
+		ctx context.Context, cmd redis.Cmder,
+	) error {
 		span := tracer.SpanFromContext(ctx)
 		ttSpan, ok := span.(*tracetest.Span)
 		if !ok {
@@ -187,7 +191,9 @@ func TestTracingHook_ProcessPipelineHook(t *testing.T) {
 		redis.NewStringCmd(ctx, "get", "key"),
 	}
 
-	processPipelineHook := hook.ProcessPipelineHook(func(ctx context.Context, cmds []redis.Cmder) error {
+	processPipelineHook := hook.ProcessPipelineHook(func(
+		ctx context.Context, cmds []redis.Cmder,
+	) error {
 		span := tracer.SpanFromContext(ctx)
 		ttSpan, ok := span.(*tracetest.Span)
 		if !ok {
@@ -195,7 +201,8 @@ func TestTracingHook_ProcessPipelineHook(t *testing.T) {
 		}
 
 		if ttSpan.Name != "redis.pipeline->ping->get" {
-			t.Errorf("expected name to be redis.pipeline->ping->get but got %s", ttSpan.Name)
+			t.Errorf("expected name to be redis.pipeline->ping->get but got %s",
+				ttSpan.Name)
 		}
 
 		if len(ttSpan.Attributes) < 1 {
@@ -235,6 +242,107 @@ func TestTracingHook_ProcessPipelineHook(t *testing.T) {
 	})
 
 	err := processPipelineHook(ctx, commands)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOption_WithSpanNameGenerator_Process(t *testing.T) {
+	tt := tracetest.NewTracer()
+	tracer.SetGlobalTracer(tt)
+	hook := NewHook(WithSpanNameGenerator(SpanNameGenerator{
+		Process: func(cmd redis.Cmder) string {
+			return fmt.Sprintf("hello_world_%s", cmd.FullName())
+		},
+	}))
+	ctx := context.TODO()
+	cmd := redis.NewCmd(ctx, "ping")
+	processHook := hook.ProcessHook(func(
+		ctx context.Context, cmd redis.Cmder,
+	) error {
+		span := tracer.SpanFromContext(ctx)
+		ttSpan, ok := span.(*tracetest.Span)
+		if !ok {
+			t.Fatal("span was not recorded")
+		}
+
+		if ttSpan.Name != "hello_world_ping" {
+			t.Errorf("expected name to be hello_world_ping but got %s",
+				ttSpan.Name)
+		}
+
+		return nil
+	})
+
+	err := processHook(ctx, cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOption_WithSpanNameGenerator_PipelineProcess(t *testing.T) {
+	tt := tracetest.NewTracer()
+	tracer.SetGlobalTracer(tt)
+	hook := NewHook(WithSpanNameGenerator(SpanNameGenerator{
+		PipelineProcess: func(cmd []redis.Cmder) string {
+			return "hello_world"
+		},
+	}))
+	ctx := context.TODO()
+	commands := []redis.Cmder{
+		redis.NewCmd(ctx, "ping"),
+		redis.NewStringCmd(ctx, "get", "key"),
+	}
+	pipelineHook := hook.ProcessPipelineHook(func(
+		ctx context.Context, commands []redis.Cmder,
+	) error {
+		span := tracer.SpanFromContext(ctx)
+		ttSpan, ok := span.(*tracetest.Span)
+		if !ok {
+			t.Fatal("span was not recorded")
+		}
+
+		if ttSpan.Name != "hello_world" {
+			t.Errorf("expected name to be hello_world but got %s",
+				ttSpan.Name)
+		}
+
+		return nil
+	})
+
+	err := pipelineHook(ctx, commands)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOption_WithSpanNameGenerator_Dial(t *testing.T) {
+	tt := tracetest.NewTracer()
+	tracer.SetGlobalTracer(tt)
+	hook := NewHook(WithSpanNameGenerator(SpanNameGenerator{
+		Dial: func(network, addr string) string {
+			return "dialing_911"
+		},
+	}))
+	ctx := context.TODO()
+	dialHook := hook.DialHook(func(
+		ctx context.Context, network, addr string,
+	) (net.Conn, error) {
+		span := tracer.SpanFromContext(ctx)
+		ttSpan, ok := span.(*tracetest.Span)
+		if !ok {
+			t.Fatal("span was not recorded")
+		}
+
+		if ttSpan.Name != "dialing_911" {
+			t.Errorf("expected name to be dialing_911 but got %s",
+				ttSpan.Name)
+		}
+
+		return nil, nil
+	})
+
+	_, err := dialHook(ctx, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

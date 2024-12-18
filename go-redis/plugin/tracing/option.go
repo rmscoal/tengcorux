@@ -1,9 +1,10 @@
 package tracing
 
 import (
-	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"net"
 	"strconv"
+
+	"github.com/rmscoal/tengcorux/tracer/attribute"
 )
 
 type Option func(*Tracing)
@@ -20,7 +21,24 @@ func WithConnectionString(str string) Option {
 	return func(tr *Tracing) {
 		if str != "" && tr.includeAddress {
 			tr.spanAttributes = append(tr.spanAttributes,
-				attribute.KeyValuePair("db.connection_string", str))
+				attribute.KeyValuePair("db.connection_string", str),
+			)
+		}
+	}
+}
+
+// WithSpanNameGenerator replaces the default span name generator if the given
+// field value is not nil.
+func WithSpanNameGenerator(gen SpanNameGenerator) Option {
+	return func(tr *Tracing) {
+		if gen.Dial != nil {
+			tr.spanNameGenerator.Dial = gen.Dial
+		}
+		if gen.Process != nil {
+			tr.spanNameGenerator.Process = gen.Process
+		}
+		if gen.PipelineProcess != nil {
+			tr.spanNameGenerator.PipelineProcess = gen.PipelineProcess
 		}
 	}
 }
@@ -32,7 +50,8 @@ func WithClientType(t string) Option {
 		switch t {
 		case "client", "cluster", "ring":
 			tr.spanAttributes = append(tr.spanAttributes,
-				attribute.KeyValuePair("redis.client_type", t))
+				attribute.KeyValuePair("redis.client_type", t),
+			)
 		}
 	}
 }
@@ -51,14 +70,16 @@ func WithServerAddress(addr string) Option {
 			return
 		}
 		tr.spanAttributes = append(tr.spanAttributes,
-			attribute.KeyValuePair("server.host", host))
+			attribute.KeyValuePair("server.host", host),
+		)
 
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
 			return
 		}
 		tr.spanAttributes = append(tr.spanAttributes,
-			attribute.KeyValuePair("server.port", port))
+			attribute.KeyValuePair("server.port", port),
+		)
 	}
 }
 
@@ -72,7 +93,9 @@ func IncludeAddress(on bool) Option {
 			for i := 0; i < len(tr.spanAttributes); i++ {
 				switch tr.spanAttributes[i].Key {
 				case "server.port", "server.host", "db.connection_string":
-					tr.spanAttributes = append(tr.spanAttributes[:i], tr.spanAttributes[i+1:]...)
+					tr.spanAttributes = append(tr.spanAttributes[:i],
+						tr.spanAttributes[i+1:]...,
+					)
 					i--
 				}
 			}
