@@ -7,52 +7,78 @@ import (
 )
 
 func TestSpanRecorder_OnStart(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("should not panicked, but panicked with %s", r)
+		}
+	}()
+
 	recorder := NewSpanRecorder()
 
-	span := &Span{
-		StartTime: time.Now(),
-		Name:      "testing",
-		TraceID:   1,
-		SpanID:    2,
-	}
+	t.Run("Nil Span", func(t *testing.T) {
+		recorder.OnStart(nil)
+		started := recorder.StartedSpans()
+		if len(started) != 0 {
+			t.Fatalf("got %d spans, want 0", len(started))
+		}
+	})
 
-	recorder.OnStart(span)
-	started := recorder.StartedSpans()
-	if len(started) != 1 {
-		t.Fatalf("got %d spans, want 1", len(started))
-	}
+	t.Run("Normal Span", func(t *testing.T) {
+		span := &Span{
+			StartTime: time.Now(),
+			Name:      "testing",
+			TraceID:   1,
+			SpanID:    2,
+		}
+
+		recorder.OnStart(span)
+		started := recorder.StartedSpans()
+		if len(started) != 1 {
+			t.Fatalf("got %d spans, want 1", len(started))
+		}
+	})
 }
 
 func TestSpanRecorder_OnEnd(t *testing.T) {
 	recorder := NewSpanRecorder()
 
-	startTime := time.Now().Add(-1 * time.Second)
-	endTime := startTime.Add(1 * time.Second)
+	t.Run("Nil Span", func(t *testing.T) {
+		recorder.OnEnd(nil)
+		ended := recorder.EndedSpans()
+		if len(ended) != 0 {
+			t.Fatalf("got %d spans, want 0", len(ended))
+		}
+	})
 
-	span := &Span{
-		StartTime: startTime,
-		EndTime:   endTime,
-		Name:      "testing",
-		TraceID:   1,
-		SpanID:    2,
-	}
+	t.Run("Normal Span", func(t *testing.T) {
+		startTime := time.Now().Add(-1 * time.Second)
+		endTime := startTime.Add(1 * time.Second)
 
-	recorder.OnEnd(span)
-	ended := recorder.EndedSpans()
-	if len(ended) != 1 {
-		t.Fatalf("got %d spans, want 1", len(ended))
-	}
+		span := &Span{
+			StartTime: startTime,
+			EndTime:   endTime,
+			Name:      "testing",
+			TraceID:   1,
+			SpanID:    2,
+		}
 
-	// Validate time order and duration
-	recordedSpan := ended[0]
-	expectedDuration := endTime.Sub(startTime)
+		recorder.OnEnd(span)
+		ended := recorder.EndedSpans()
+		if len(ended) != 1 {
+			t.Fatalf("got %d spans, want 1", len(ended))
+		}
 
-	if !recordedSpan.EndTime.After(recordedSpan.StartTime) {
-		t.Error("end time should be after start time")
-	}
-	if recordedSpan.EndTime.Sub(recordedSpan.StartTime) != expectedDuration {
-		t.Error("incorrect span duration")
-	}
+		// Validate time order and duration
+		recordedSpan := ended[0]
+		expectedDuration := endTime.Sub(startTime)
+
+		if !recordedSpan.EndTime.After(recordedSpan.StartTime) {
+			t.Error("end time should be after start time")
+		}
+		if recordedSpan.EndTime.Sub(recordedSpan.StartTime) != expectedDuration {
+			t.Error("incorrect span duration")
+		}
+	})
 }
 
 func TestSpanRecorder_OnStart_Concurrent(t *testing.T) {
@@ -96,11 +122,13 @@ func TestSpanRecorder_OnStart_Concurrent(t *testing.T) {
 		switch span.SpanID {
 		case 1:
 			if span.Name != "testing_first_span" {
-				t.Fatalf("span of id %d has invalid name, got %s but want %s", span.SpanID, span.Name, "testing_first_span")
+				t.Fatalf("span of id %d has invalid name, got %s but want %s",
+					span.SpanID, span.Name, "testing_first_span")
 			}
 		case 2:
 			if span.Name != "testing_second_span" {
-				t.Fatalf("span of id %d has invalid name, got %s but want %s", span.SpanID, span.Name, "testing_second_span")
+				t.Fatalf("span of id %d has invalid name, got %s but want %s",
+					span.SpanID, span.Name, "testing_second_span")
 			}
 		}
 	}
@@ -149,11 +177,13 @@ func TestSpanRecorder_OnEnd_Concurrent(t *testing.T) {
 		switch span.SpanID {
 		case 1:
 			if span.Name != "testing_first_span" {
-				t.Fatalf("span of id %d has invalid name, got %s but want %s", span.SpanID, span.Name, "testing_first_span")
+				t.Fatalf("span of id %d has invalid name, got %s but want %s",
+					span.SpanID, span.Name, "testing_first_span")
 			}
 		case 2:
 			if span.Name != "testing_second_span" {
-				t.Fatalf("span of id %d has invalid name, got %s but want %s", span.SpanID, span.Name, "testing_second_span")
+				t.Fatalf("span of id %d has invalid name, got %s but want %s",
+					span.SpanID, span.Name, "testing_second_span")
 			}
 		}
 	}

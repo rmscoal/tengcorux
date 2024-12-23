@@ -3,8 +3,9 @@ package tracer
 import (
 	"context"
 	"errors"
-	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"testing"
+
+	"github.com/rmscoal/tengcorux/tracer/attribute"
 )
 
 func TestNoopTracer_StartSpan(t *testing.T) {
@@ -44,13 +45,23 @@ func TestNoopTracer_SpanFromContext(t *testing.T) {
 	}
 }
 
-func TestNoopSpan_SetAttributes(t *testing.T) {
-	defer t.Cleanup(func() {
+func TestNoopSpan_End(t *testing.T) {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
+
+	span := &NoopSpan{}
+	span.End()
+}
+
+func TestNoopSpan_SetAttributes(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error("should not panic")
+		}
+	}()
 
 	span := &NoopSpan{}
 	span.SetAttributes(attribute.DBName("some_db_name"))
@@ -58,12 +69,11 @@ func TestNoopSpan_SetAttributes(t *testing.T) {
 }
 
 func TestNoopSpan_AddEvent(t *testing.T) {
-	defer t.Cleanup(func() {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
 
 	span := &NoopSpan{}
 	span.AddEvent("event_1")
@@ -83,12 +93,11 @@ func TestNoopSpan_RecordError(t *testing.T) {
 }
 
 func TestNoopSpan_Context(t *testing.T) {
-	defer t.Cleanup(func() {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
 
 	span := &NoopSpan{}
 	_, ok := span.Context().(*NoopSpanContext)
@@ -98,12 +107,11 @@ func TestNoopSpan_Context(t *testing.T) {
 }
 
 func TestNoopSpanContext_TraceID(t *testing.T) {
-	defer t.Cleanup(func() {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
 
 	sc := &NoopSpanContext{}
 	traceId := sc.TraceID()
@@ -113,12 +121,11 @@ func TestNoopSpanContext_TraceID(t *testing.T) {
 }
 
 func TestNoopSpanContext_SpanID(t *testing.T) {
-	defer t.Cleanup(func() {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
 
 	sc := &NoopSpanContext{}
 	spanId := sc.SpanID()
@@ -128,12 +135,11 @@ func TestNoopSpanContext_SpanID(t *testing.T) {
 }
 
 func TestNoopSpanContext_Context(t *testing.T) {
-	defer t.Cleanup(func() {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
 
 	sc := &NoopSpanContext{}
 	ctx := sc.Context()

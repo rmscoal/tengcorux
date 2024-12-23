@@ -47,12 +47,11 @@ func TestStartSpan(t *testing.T) {
 }
 
 func TestShutdown(t *testing.T) {
-	defer t.Cleanup(func() {
+	defer func() {
 		if r := recover(); r != nil {
 			t.Error("should not panic")
-			t.FailNow()
 		}
-	})
+	}()
 
 	t.Run("With Non Empty Context", func(t *testing.T) {
 		ctx := context.Background()

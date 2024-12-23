@@ -6,7 +6,7 @@ import (
 )
 
 func TestAttribute_KeyValuePair(t *testing.T) {
-	got := KeyValuePair("some_key", "some_val")
+	got := KeyValuePair("some_key", "some_value")
 	want := KeyValue{Key: Key("some_key"), Value: any("some_value")}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("want %v, got %v", got, want)
@@ -45,7 +45,9 @@ func TestAttribute_HTTPUrlPath(t *testing.T) {
 
 func TestAttribute_HTTPRequestBody(t *testing.T) {
 	got := HTTPRequestBody("{\"loanId\": \"some_loan_id\"")
-	want := KeyValue{Key: HTTPRequestBodyKey, Value: any("{\"loanId\": \"some_loan_id\"")}
+	want := KeyValue{
+		Key: HTTPRequestBodyKey, Value: any("{\"loanId\": \"some_loan_id\""),
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("want %v, got %v", got, want)
 	}
@@ -77,7 +79,9 @@ func TestAttribute_HTTPResponseStatus(t *testing.T) {
 
 func TestAttribute_HTTPResponseBody(t *testing.T) {
 	got := HTTPResponseBody("{\"message\": \"Success\"}")
-	want := KeyValue{Key: HTTPResponseBodyKey, Value: any("{\"message\": \"Success\"}")}
+	want := KeyValue{
+		Key: HTTPResponseBodyKey, Value: any("{\"message\": \"Success\"}"),
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("want %v, got %v", got, want)
 	}
@@ -109,7 +113,10 @@ func TestAttribute_DBInstanceID(t *testing.T) {
 
 func TestAttribute_DBStatement(t *testing.T) {
 	got := DBStatement("SELECT * FROM test WHERE id = ? AND status = ?")
-	want := KeyValue{Key: DBStatementKey, Value: any("SELECT * FROM test WHERE id = ? AND status = ?")}
+	want := KeyValue{
+		Key:   DBStatementKey,
+		Value: any("SELECT * FROM test WHERE id = ? AND status = ?"),
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("want %v, got %v", got, want)
 	}
@@ -173,7 +180,9 @@ func TestAttribute_MQConsumerGroup(t *testing.T) {
 
 func TestAttribute_MQMessageBody(t *testing.T) {
 	got := MQMessageBody("{\"content\":\"hello world\"}")
-	want := KeyValue{Key: MQMessageBodyKey, Value: any("{\"content\":\"hello world\"}")}
+	want := KeyValue{
+		Key: MQMessageBodyKey, Value: any("{\"content\":\"hello world\"}"),
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("want %v, got %v", got, want)
 	}

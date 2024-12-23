@@ -3,22 +3,39 @@ package tracetest
 import (
 	"context"
 	"errors"
-	"github.com/rmscoal/tengcorux/tracer/attribute"
 	"testing"
+	"time"
+
+	"github.com/rmscoal/tengcorux/tracer/attribute"
 )
 
 func TestSpan_End(t *testing.T) {
 	tracer := NewTracer()
 
-	span := &Span{tracer: tracer}
-	span.End()
+	t.Run("Ended Span", func(t *testing.T) {
+		span := &Span{tracer: tracer, EndTime: time.Now()}
+		span.End()
 
-	if span.EndTime.IsZero() {
-		t.Error("end time should not be zero")
-	}
-	if len(span.tracer.recorder.EndedSpans()) == 0 {
-		t.Error("ended spans should not be empty")
-	}
+		if span.EndTime.IsZero() {
+			t.Error("end time should not be zero")
+		}
+		if len(span.tracer.recorder.EndedSpans()) != 0 {
+			t.Error("ended spans should be empty")
+		}
+	})
+
+	t.Run("Unfinished Span", func(t *testing.T) {
+		span := &Span{tracer: tracer}
+		span.End()
+
+		if span.EndTime.IsZero() {
+			t.Error("end time should not be zero")
+		}
+		if len(span.tracer.recorder.EndedSpans()) == 0 {
+			t.Error("ended spans should not be empty")
+		}
+	})
+
 }
 
 func TestSpan_SetAttributes(t *testing.T) {
@@ -29,18 +46,21 @@ func TestSpan_SetAttributes(t *testing.T) {
 	)
 
 	if len(span.Attributes) != 2 {
-		t.Errorf("expected span to have 2 attributes, but got %d", len(span.Attributes))
+		t.Errorf("expected span to have 2 attributes, but got %d",
+			len(span.Attributes))
 	}
 
 	for _, kv := range span.Attributes {
 		switch kv.Key {
 		case "Hello1":
 			if kv.Value != "World1" {
-				t.Errorf("expected attribute value to be \"World1\", but got %s", kv.Value)
+				t.Errorf("expected attribute value to be \"World1\", but got %s",
+					kv.Value)
 			}
 		case "Hello2":
 			if kv.Value != "World2" {
-				t.Errorf("expected attribute value to be \"World2\", but got %s", kv.Value)
+				t.Errorf("expected attribute value to be \"World2\", but got %s",
+					kv.Value)
 			}
 		default:
 			t.Errorf("unknown attribute key: %s", kv.Key)
@@ -101,20 +121,39 @@ func TestSpanContext_Context(t *testing.T) {
 
 func TestSpanContext_TraceID(t *testing.T) {
 	tracer := NewTracer()
-	_, span := tracer.StartSpan(context.Background(), "hello")
 
-	sc := span.Context()
-	if sc.TraceID() == "" {
-		t.Error("expected trace ID to be non-empty string")
-	}
+	t.Run("Called From StartSpan", func(t *testing.T) {
+		_, span := tracer.StartSpan(context.Background(), "hello")
+
+		sc := span.Context()
+		if sc.TraceID() == "" {
+			t.Error("expected trace ID to be non-empty string")
+		}
+	})
+
+	t.Run("Empty Context Value", func(t *testing.T) {
+		sc := &SpanContext{context.TODO()}
+		if sc.TraceID() != "" {
+			t.Error("expected empty trace ID to be empty")
+		}
+	})
 }
 
 func TestSpanContext_SpanID(t *testing.T) {
 	tracer := NewTracer()
-	_, span := tracer.StartSpan(context.Background(), "hello")
 
-	sc := span.Context()
-	if sc.SpanID() == "" {
-		t.Error("expected trace ID to be non-empty string")
-	}
+	t.Run("Called From StartSpan", func(t *testing.T) {
+		_, span := tracer.StartSpan(context.Background(), "hello")
+		sc := span.Context()
+		if sc.SpanID() == "" {
+			t.Error("expected trace ID to be non-empty string")
+		}
+	})
+
+	t.Run("Empty Context Value", func(t *testing.T) {
+		sc := &SpanContext{context.TODO()}
+		if sc.SpanID() != "" {
+			t.Error("expected empty span ID to be empty")
+		}
+	})
 }
