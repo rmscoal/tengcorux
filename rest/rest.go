@@ -1,20 +1,16 @@
 package rest
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
-	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/google/uuid"
+	"github.com/rmscoal/tengcorux/reqid"
 	"github.com/rmscoal/tengcorux/tracer"
 	"github.com/rmscoal/tengcorux/tracer/attribute"
 )
-
-const XRequestId = "X-Request-Id"
 
 // Rest is a wrapper for *resty.Client with extra fields and features.
 type Rest struct {
@@ -40,10 +36,6 @@ func New(opts ...Option) *Rest {
 	return rest
 }
 
-func Version() string {
-	return "v0.1.1"
-}
-
 // registerTracerMiddleware registers OnBeforeRequest and OnAfterResponse middleware
 // for tracer to start the span and captures the attributes.
 func (r *Rest) registerTracerMiddleware() {
@@ -65,15 +57,8 @@ func (r *Rest) registerTracerMiddleware() {
 				)
 
 				// Injects X-Request-Id to the request by reading from the context
-				requestID, found := ctx.Value(XRequestId).(string)
-				if !found {
-					requestID = fmt.Sprintf(
-						"%s-%s", uuid.New().String(),
-						time.Now().Format(time.RFC3339),
-					)
-					ctx = context.WithValue(ctx, XRequestId, requestID)
-				}
-				request.SetHeader(XRequestId, requestID)
+				requestID := reqid.RetrieveFromContext(ctx)
+				request.SetHeader(reqid.HeaderKey, requestID)
 
 				// Add spans to the attribute
 				span.SetAttributes(
